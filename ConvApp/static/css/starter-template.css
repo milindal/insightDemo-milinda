@@ -1,0 +1,25 @@
+body {
+  padding-top: 1px;
+  font-size: 150%;
+}
+.starter-template {
+  padding: 5px 1px;
+  text-align: center;
+}
+
+.starter-template .lead{
+  font-size: 100%;
+}
+
+.url_textbox {
+    width: 600px;
+}
+
+.row > div {
+	/*background-color: #dedef8;*/
+	box-shadow: inset 1px -1px 1px #444, inset -1px 1px 1px #444;
+}
+
+.row > .col-md-12 > p {
+	font-size: 100%;
+}

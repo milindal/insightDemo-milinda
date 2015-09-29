@@ -1,3 +1,3 @@
 #!/usr/bin/env python
-from app import app
+from ConvApp import app
 app.run(debug = True)
