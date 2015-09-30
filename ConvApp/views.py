@@ -31,6 +31,7 @@ def index():
 @app.route('/output')
 def output():
   # # Load the dictionary
+  # database_dict = pickle.load(open( '/Users/milindal/Dropbox/Insight/insightDemo-milinda/data/updated_database_dict.p', 'rb'))
   database_dict = pickle.load(open( data_folder_path + 'updated_database_dict.p', 'rb'))
 
   # #pull 'ID' from input field and store it

@@ -20,6 +20,7 @@ alchemy_folder_path = os.environ.get('ALCHEMY_API_PATH')
 data_folder_path = os.environ.get('CONV_APP_DATA_PATH')
 
 sys.path.insert(0, alchemy_folder_path)
+# sys.path.insert(0, '/Users/milindal/Dropbox/Insight/insightDemo-milinda/alchemy-test/alchemyapi_python/')
 from alchemyapi import AlchemyAPI
 alchemyapi = AlchemyAPI()
 
