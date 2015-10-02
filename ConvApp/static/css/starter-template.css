@@ -27,3 +27,8 @@ body {
 #pad-me{ 
 	padding-bottom: 10px;
 }
+
+#slides-container{
+	padding: 50px 10px;
+  	text-align: center;
+}

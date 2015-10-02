@@ -28,6 +28,9 @@ def index():
        title = 'Home',
        user = user)
 
+@app.route('/slides')
+def slides(): 
+  return render_template("slides.html", title = 'Slides')
 
 @app.route('/output')
 def output():
