@@ -23,3 +23,7 @@ body {
 .row > .col-md-12 > p {
 	font-size: 100%;
 }
+
+#pad-me{ 
+	padding-bottom: 10px;
+}

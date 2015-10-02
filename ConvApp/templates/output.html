@@ -20,12 +20,16 @@
     <!--[if lt IE 9]><script src="../../assets/js/ie8-responsive-file-warning.js"></script><![endif]-->
     <script src="../../assets/js/ie-emulation-modes-warning.js"></script>
 
+    <script type="text/javascript" src="http://code.jquery.com/jquery-1.4.2.min.js"></script>
+
     <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
     <!--[if lt IE 9]>
       <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
       <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
     <![endif]-->
   </head>
+
+  <!-- // <script src="../static/js/output.js"></script> -->
 
   <nav class="navbar navbar-inverse navbar-fixed-top">
       <div class="container">
@@ -52,43 +56,27 @@
 
   <div class="container">
     <div class="row"> 
-      <div class="col-md-7" > 
+      <div class="col-md-12"> 
         <h3>Article: {{ article_summary['headline']}}</h3>
-        <img src="data:image/png;base64,{{title_png}}" width="400" height="300"/>
+        <!-- <img src="data:image/png;base64,{{title_png}}" width="400" height="300"/> -->
         <div class="row"> 
-          <div class="col-md-6">
+          <div class="col-md-4" id="pad-me" >
+            <h4> Keywords from the article </h4>
+            <img src="data:image/png;base64,{{title_png}}" width="300" height="225"/>
+          </div>
+          <div class="col-md-4" id="pad-me" >
             <h4> Sentiment expressed in the article </h4>
             <img src="data:image/png;base64,{{img_data}}" width="300" height="225"/>
           </div>
-          <div class="col-md-6">
+          <div class="col-md-4" id="pad-me" >
             <h4> Comment clusters </h4>
             <img src="data:image/png;base64,{{pie_png}}" width="300" height="225"/>
           </div>
         </div>
       </div>
-      <div class="col-md-5" >
+      <div class="col-md-12" >
         <h3> Comments </h3>
-        <div class="row">
-          <div class="col-md-12" > 
-            <h4> Cluster 1</h4>
-            <img src="data:image/png;base64,{{comment_coulds[0]}}" width="400" height="300"/>
-            <p class="lead">{{RepComment[0]['comment']}}</p>
-          </div>
-        </div>
-        <div class="row">
-          <div class="col-md-12" > 
-            <h4> Cluster 2</h4>
-            <img src="data:image/png;base64,{{comment_coulds[1]}}" width="400" height="300"/>
-            <p class="lead">{{RepComment[1]['comment']}}</p>
-          </div>
-        </div>
-        <div class="row">
-          <div class="col-md-12" >
-            <h4> Cluster 3</h4> 
-            <img src="data:image/png;base64,{{comment_coulds[2]}}" width="400" height="300"/>
-            <p class="lead">{{RepComment[2]['comment']}}</p>
-          </div>
-        </div>
+          <div id="cluster-container">{{comment_div_str|safe}}</div>
       </div>
     </div>
   </div>

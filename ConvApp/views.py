@@ -9,6 +9,7 @@ import StringIO
 import random
 import urllib
 import matplotlib as mpl
+import numpy as np
 
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from matplotlib.figure import Figure
@@ -36,11 +37,19 @@ def output():
 
   # #pull 'ID' from input field and store it
   url_string = request.args.get('ID')
+  # pull the number of clusters from the user form
+  if request.args.get('Nclusters'): 
+    Nclusters = int(request.args.get('Nclusters'))
+  else: 
+    Nclusters = 3
+  
   if len(url_string) < 5: 
     url_string = 'http://www.nytimes.com/2015/09/20/opinion/sunday/a-toxic-work-world.html'
 
   if url_string not in database_dict.keys(): 
     database_dict = UpdateDatabase(url_string, database_dict)
+
+  print 'Nclusters: ', Nclusters
   
   headline = database_dict[url_string]['title']
   abstract = database_dict[url_string]['abstract']
@@ -63,7 +72,7 @@ def output():
 
 
   # Get the three representative comments
-  rep_comments = GetRepresentativeComments(database_dict[url_string]['comments_df']) 
+  rep_comments = GetRepresentativeComments(database_dict[url_string]['comments_df'], Nclusters) 
   senti_pos = database_dict[url_string]['comments_df']['senti_pos'] 
  
  # Get the pie chart 
@@ -71,11 +80,16 @@ def output():
   fig.set_facecolor('None')
   ax = fig.add_subplot(111)
 
-  labels = ['Cluster 1', 'Cluster 2', 'Cluster 3']
-  sizes = [rep_comments[0]['count'], rep_comments[1]['count'], rep_comments[2]['count']]
-  colors = ['yellowgreen', 'gold', 'lightskyblue'] #, 'lightcoral']
+  color_repo = ['#4D4D4D', '#5DA5DA', '#FAA43A', '#60BD68', '#F17CB0', '#B2912F', '#B276B2', '#DECF3F', '#F15854']
 
-  ax.pie(sizes, labels=labels, colors=colors,
+  
+  sizes = [rep_comments[i]['count'] for i in range(Nclusters)]
+  colors = [color_repo[i] for i in range(Nclusters)]
+  sorted_sizes_args = np.argsort(sizes)[::-1]
+  labels = ['Cluster ' + str(i+1) for i in range(Nclusters)]
+  sorted_sizes = sorted(sizes)[::-1]
+
+  ax.pie(sorted_sizes, labels=labels, colors=colors,
           autopct='%1.1f%%', shadow=True, startangle=90)
   ax.set_axis_off()
   canvas=FigureCanvas(fig)
@@ -93,6 +107,12 @@ def output():
   ax.set_xlim(0,1)
   ax.set_xlabel('Sentiment Scale')
   ax.set_ylabel('Number of Comments')
+  ax.set_xticks(np.linspace(0, 1, 5))
+  senti_labels = [item.get_text() for item in ax.get_xticklabels()]
+  senti_labels[0] = 'Neg'
+  senti_labels[2] = '0'
+  senti_labels[-1] = 'Pos'
+  ax.set_xticklabels(senti_labels)
   canvas=FigureCanvas(fig)
   png_output = StringIO.StringIO()
   canvas.print_png(png_output)
@@ -100,8 +120,9 @@ def output():
 
   # Return word clouds for different comments 
   word_cloud_comments = {} # key: cluster_label, val: 
-  for lab in range(3):
+  for lab in range(Nclusters):
     comment_keywords = getKeywords(rep_comments[lab]['comment'])
+    # comment_keywords = rep_comments[lab]['cluster_keywords']
     keyword_wordfreq_list = [ (word, len(comment_keywords) - i) for i,word in enumerate(comment_keywords)]
     wordcloud = WordCloud().generate_from_frequencies(keyword_wordfreq_list)
     fig = Figure() 
@@ -115,9 +136,15 @@ def output():
     comment_cloud_png_output = comment_cloud_png_output.getvalue().encode("base64")
     word_cloud_comments[lab] = urllib.quote(comment_cloud_png_output.rstrip('\n'))
 
-  # return render_template("output.html", article_summary = article_summary, the_result = the_result, RepComment = rep_comments)
+  print word_cloud_comments[0].__class__.__name__
+  comment_div_str = '' 
+  for i in range(Nclusters): 
+    temp_str = '<div class="row"> <div class="col-md-12" > <h4> Cluster ' + str(i+1) + 'count: ' + str(sizes[sorted_sizes_args[i]]) + '</h4>  <div class="col-md-5" > <img src="data:image/png;base64,' + word_cloud_comments[sorted_sizes_args[i]] + '" width="400" height="300"/> </div>' + '<div class="col-md-7" > <p class="lead"> ' + rep_comments[sorted_sizes_args[i]]['comment'] + '</p> </div>' + '</div> </div> '
+    comment_div_str += temp_str
+
 
   return render_template("output.html", title_png = urllib.quote(title_cloud_png_output.rstrip('\n')), 
     article_summary = article_summary,  RepComment = rep_comments, comment_coulds = word_cloud_comments, 
-    pie_png = urllib.quote(pie_png_output.rstrip('\n')), img_data=urllib.quote(png_output.rstrip('\n')))
+    pie_png = urllib.quote(pie_png_output.rstrip('\n')), img_data=urllib.quote(png_output.rstrip('\n')),
+    Nclusters = Nclusters, comment_div_str=comment_div_str)
 

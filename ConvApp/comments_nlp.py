@@ -124,9 +124,11 @@ def StripHtml(data):
 	return p.sub('', data)
 
 
-def GetRepresentativeComments(comments_df): 
+def GetRepresentativeComments(comments_df, Nclusters): 
 	# Input: comments_df - Dataframe with the information of the comments
-	# Output: closest_trusted - Dictionary with key: cluster_id, val: { 'comment': closest trusted comment, 'count': Ncomments}
+	#        Nclusters - Number of clusters 
+	# Output: closest_trusted - Dictionary with key: cluster_id, val: { 'comment': closest trusted comment,
+	#                                                                   'count': Ncomments, 'cluster_keywords': cluster_keywords}
 	#        If there is no trusted comment in the cluster, we choose the closest comment to 
 	#        the centroid
 	SOME_FIXED_SEED = 70
@@ -172,7 +174,7 @@ def GetRepresentativeComments(comments_df):
 		comments_coords_lsi_ND.append(coord_temp)
 
 	## Clustering 
-	k_fixed = 3
+	k_fixed = Nclusters
 	kmeans = KMeans(k_fixed).fit(np.array(comments_coords_lsi_ND)[:, 0:10])
 
 	# Calculate the distances 
@@ -181,7 +183,7 @@ def GetRepresentativeComments(comments_df):
 
     # Get the three closest comments 
 	closest_trusted = {}
-	for lab in range(3):
+	for lab in range(Nclusters):
 		closest_trusted[lab] = {} 
 #         print 'cluster: ', lab
 		indices = [i for i, x in enumerate(kmeans.labels_) if x == lab]
@@ -210,5 +212,11 @@ def GetRepresentativeComments(comments_df):
 			closest_trusted[lab]['comment'] = StripHtml(comments_df.loc[closest_idx, 'commentBody'])
 
 		closest_trusted[lab]['count'] = sum(kmeans.labels_ == lab)
+
+		# Get the key words corresponding to the clusters
+		cluster_comment_str = ''
+		for i in indices: 
+			cluster_comment_str += StripHtml(comments_df.loc[i, 'commentBody'])
+		closest_trusted[lab]['cluster_keywords'] = getKeywords(cluster_comment_str)
         
 	return closest_trusted
