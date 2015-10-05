@@ -1,30 +1,31 @@
-# Should I import modules elsewhere?
-from urllib2 import Request, urlopen, URLError
-import numpy as np 
-import json 
-import pandas as pd 
-import matplotlib.pyplot as plt 
-import gensim as gs
-import nltk
-from sklearn.cluster import KMeans
-import pickle
+import os
+import sys 
 import string 
 import re
+import pickle
+import json 
+import urllib
+from urllib2 import Request, urlopen, URLError
+
+import numpy as np 
+import pandas as pd 
+import matplotlib.pyplot as plt 
+from sklearn.cluster import KMeans
+
+import nltk
 from nltk.corpus import stopwords
 from nltk.stem import PorterStemmer
-import sys 
-import urllib
-import os
+import gensim as gs
+
 
 alchemy_folder_path = os.environ.get('ALCHEMY_API_PATH')
 data_folder_path = os.environ.get('CONV_APP_DATA_PATH')
 
 sys.path.insert(0, alchemy_folder_path)
-# sys.path.insert(0, '/Users/milindal/Dropbox/Insight/insightDemo-milinda/alchemy-test/alchemyapi_python/')
 from alchemyapi import AlchemyAPI
 alchemyapi = AlchemyAPI()
 
-def UpdateDatabase(url_string, database_dict): 
+def update_database(url_string, database_dict): 
 	# Updates database_dict when url_string is not present in database_dict
 	# Inputs: url_string 
 	#         database_dict: dictionary to be updated with data of the url_string 
@@ -45,7 +46,7 @@ def UpdateDatabase(url_string, database_dict):
 				break
 			comments_list += temp_data_list
 	except URLError, e:
-		print 'No data received. Got an error code:', e
+		print 'No data received from the NYT community API. Got an error code:', e
         
 	comments_df = pd.DataFrame(comments_list)
       
@@ -58,7 +59,7 @@ def UpdateDatabase(url_string, database_dict):
 		temp_data = json.load(urlopen(request))
 		print len(temp_data)
 	except URLError, e:
-		print 'No data received. Got an error code:', e
+		print 'No data received from the NYT Article Search API. Got an error code:', e
       
 	# Populate the database 
 	database_dict[url_string] = {'comments_df': comments_df, 
@@ -85,27 +86,23 @@ def UpdateDatabase(url_string, database_dict):
 	database_dict[url_string]['comments_df']['senti_neg'] = senti_neg
 	database_dict[url_string]['comments_df']['senti_neutral'] = senti_neutral
 
-	pickle.dump(database_dict, open( data_folder_path +'updated_database_dict.p', 'wb'))
+	pickle.dump(database_dict, open(data_folder_path +'updated_database_dict.p', 'wb'))
 
 	return database_dict
 
-def getKeywords(comment_text):
-	# Get a list of the top 10 keywords from the comment text using Alchemy API 
+def get_keywords(comment_text, num_keywords=10):
+	# Get a list of the top `num_keywords` keywords from the comment text using Alchemy API 
 	response = alchemyapi.keywords('text', comment_text) #, {'sentiment': 1})
 	kw = []
 	if response['status'] == 'OK':
-		#print('## Response Object ##')
-		#print(json.dumps(response', indent=4))
 		try:
-			# if response["keywords"]:
 			for keyword in response['keywords']:
-				#print(keyword['text'].encode('utf-8')', keyword['relevance'])
 				s = filter(lambda x: not x.isdigit(), keyword['text'].encode('utf-8').lower())
 				for c in string.punctuation:
 					s= s.replace(c,"")
 				if s:
 					kw.append(s)
-				if len(kw) == 10:
+				if len(kw) == num_keywords:
 					return kw
 		except KeyError:
 			pass
@@ -115,7 +112,7 @@ def getKeywords(comment_text):
 			return ['limit-exceeded']
 		return ['alchemyAPI-error']
 
-	return kw[:10]
+	return kw[:num_keywords]
 
 
 
@@ -123,15 +120,26 @@ def StripHtml(data):
 	p = re.compile(r'<.*?>')
 	return p.sub('', data)
 
+def custom_color_func(word=None, font_size=None, position=None,
+                      orientation=None, font_path=None, random_state=None):
+    """Custom color generation.
 
-def GetRepresentativeComments(comments_df, Nclusters): 
+    Parameters
+    ----------
+    word, font_size, position, orientation, random_state : ignored.
+
+    """
+
+    return "black" 
+
+def get_representative_comments(comments_df, Nclusters, SOME_FIXED_SEED=70): 
 	# Input: comments_df - Dataframe with the information of the comments
 	#        Nclusters - Number of clusters 
 	# Output: closest_trusted - Dictionary with key: cluster_id, val: { 'comment': closest trusted comment,
 	#                                                                   'count': Ncomments, 'cluster_keywords': cluster_keywords}
 	#        If there is no trusted comment in the cluster, we choose the closest comment to 
 	#        the centroid
-	SOME_FIXED_SEED = 70
+	
 	np.random.seed(SOME_FIXED_SEED)
 
 	comment_bodies = comments_df['commentBody']
@@ -142,11 +150,9 @@ def GetRepresentativeComments(comments_df, Nclusters):
     # round 1: tokenizing, stemming, removing html tags and stop words
 	comment_texts = [[ps.stem(filter(lambda x: x in string.printable, word).lower()) for word in nltk.word_tokenize(StripHtml(comment)) 
                 	if word not in stop_words] for comment in comment_bodies]
-#     print len(comment_texts)
 
     # round 2: filtering, remove words from comments that are too short or which are not alphabets
 	comment_texts = [[word for word in comment if (len(word) > 2 and not word.isdigit())] for comment in comment_texts]
-#     print comment_texts[0:5]
 
     # create a dictionary for the words that appear in the comments 
 	dictionary = gs.corpora.Dictionary(comment_texts)
@@ -160,8 +166,7 @@ def GetRepresentativeComments(comments_df, Nclusters):
 
     # initialize an LSI transformation
 	lsi = gs.models.LsiModel(corpus_tfidf, id2word=dictionary, num_topics=5) 
-	corpus_lsi = lsi[corpus_tfidf] # create a double wrapper over the original corpus: bow->tfidf->fold-in-lsi
-#     lsi.print_topics(5)
+	corpus_lsi = lsi[corpus_tfidf] 
 
     # Create the coordinates for the corpus to send into the Kmeans clustering algorithm
 	comments_coords_lsi_ND = [] 
@@ -173,7 +178,7 @@ def GetRepresentativeComments(comments_df, Nclusters):
 				coord_temp[val_tuple[0]] = val_tuple[1]
 		comments_coords_lsi_ND.append(coord_temp)
 
-	## Clustering 
+	# Clustering 
 	k_fixed = Nclusters
 	kmeans = KMeans(k_fixed).fit(np.array(comments_coords_lsi_ND)[:, 0:10])
 
@@ -185,7 +190,6 @@ def GetRepresentativeComments(comments_df, Nclusters):
 	closest_trusted = {}
 	for lab in range(Nclusters):
 		closest_trusted[lab] = {} 
-#         print 'cluster: ', lab
 		indices = [i for i, x in enumerate(kmeans.labels_) if x == lab]
 
 		# Get the comment that is closest to the centroid
@@ -198,7 +202,7 @@ def GetRepresentativeComments(comments_df, Nclusters):
 
 		# Get the trusted comment that is closest to the centroid
 		closest_trusted_idx = -2
-		min_dist= 1000
+		min_dist = 1000
 		for i in indices: 
 			if comments_df.loc[i, 'trusted'] == 1: 
 				if dist_from_centroid[i] < min_dist: 
@@ -217,6 +221,6 @@ def GetRepresentativeComments(comments_df, Nclusters):
 		cluster_comment_str = ''
 		for i in indices: 
 			cluster_comment_str += StripHtml(comments_df.loc[i, 'commentBody'])
-		closest_trusted[lab]['cluster_keywords'] = getKeywords(cluster_comment_str)
+		closest_trusted[lab]['cluster_keywords'] = get_keywords(cluster_comment_str)
         
 	return closest_trusted
